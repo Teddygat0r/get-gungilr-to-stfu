@@ -1,38 +1,74 @@
-import pyaudio
+import pyaudio      #for capturing the audio-signal
+import struct       #for converting the binary-data from the signal to integer
+import matplotlib.pyplot as plt     #for displaying the audio-signal
+
+import numpy as np
 import time
-from math import log10
-import audioop  
 
-p = pyaudio.PyAudio()
-WIDTH = 2
-RATE = int(p.get_default_input_device_info()['defaultSampleRate'])
-DEVICE = p.get_default_input_device_info()['index']
-rms = 1
-print(p.get_default_input_device_info())
+#functions
+def plot_setup():
+    # create matplotlib figure and axes
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
 
-def callback(in_data, frame_count, time_info, status):
-    global rms
-    rms = audioop.rms(in_data, WIDTH) / 32767
-    return in_data, pyaudio.paContinue
+    # variable for plotting
+    x = np.arange(0, 2 * CHUNK, 2)
 
+    # create a line object with random data
+    line, = ax.plot(x, [128 for i in range(2048)], '-')
 
-stream = p.open(format=p.get_format_from_width(WIDTH),
-                input_device_index=DEVICE,
-                channels=1,
-                rate=RATE,
-                input=True,
-                output=False,
-                stream_callback=callback)
+    # basic formatting for the axes
+    ax.set_title('AUDIO WAVEFORM')
+    ax.set_xlabel('samples')
+    ax.set_ylabel('volume')
+    ax.set_ylim(0, 255)
+    ax.set_xlim(0, 2 * CHUNK)
+    plt.xticks([0, CHUNK, 2 * CHUNK])
+    plt.yticks([0, 128, 255])
+    # show the plot
+    plt.show(block=False)
+    return fig, line
 
-stream.start_stream()
+def measure():
+    # binary data
+    data = stream.read(CHUNK)  
 
-while stream.is_active(): 
-    db = 20 * log10(rms)
-    print(f"RMS: {rms} DB: {db}") 
-    # refresh every 0.3 seconds 
-    time.sleep(0.3)
+    # convert data to integers, make np array, then offset it by 127
+    data_int = struct.unpack(str(2 * CHUNK) + 'B', data)
 
-stream.stop_stream()
-stream.close()
+    # create np array and offset by 128
+    data_np = np.array(data_int, dtype='b')[::2]
+    data_np = [i+127 for i in data_np]
 
-p.terminate()
+    line.set_ydata(data_np)
+    try:
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+    except:
+        return 0
+
+# constants
+CHUNK = 1024 * 2             # samples per frame
+FORMAT = pyaudio.paInt16     # audio format (bytes per sample?)
+CHANNELS = 1                 # single channel for microphone
+RATE = 44100                 # samples per second
+
+# pyaudio class instance
+mic = pyaudio.PyAudio()
+
+# stream object to get data from microphone
+stream = mic.open(
+    format=FORMAT,
+    channels=CHANNELS,
+    rate=RATE,
+    input=True,
+    output=True,
+    frames_per_buffer=CHUNK
+)
+
+if __name__=="__main__":
+    fig, line=plot_setup()
+    while True:
+        m=measure()
+        if m==0:
+            break
