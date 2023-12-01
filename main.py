@@ -1,40 +1,38 @@
 import pyaudio
-import numpy as np
-import math
-import struct
-
-CHUNK = 1024
+import time
+from math import log10
+import audioop  
 
 p = pyaudio.PyAudio()
+WIDTH = 2
+RATE = int(p.get_default_input_device_info()['defaultSampleRate'])
+DEVICE = p.get_default_input_device_info()['index']
+rms = 1
+print(p.get_default_input_device_info())
 
-stream = p.open(format=pyaudio.paInt16,
+def callback(in_data, frame_count, time_info, status):
+    global rms
+    rms = audioop.rms(in_data, WIDTH) / 32767
+    return in_data, pyaudio.paContinue
+
+
+stream = p.open(format=p.get_format_from_width(WIDTH),
+                input_device_index=DEVICE,
                 channels=1,
-                rate=44100,
+                rate=RATE,
                 input=True,
-                frames_per_buffer=CHUNK)
+                output=False,
+                stream_callback=callback)
 
-print("Listening...")
+stream.start_stream()
 
-def rms( data ):
-    count = len(data)/2
-    format = "%dh"%(count)
-    shorts = struct.unpack( format, data )
-    sum_squares = 0.0
-    for sample in shorts:
-        n = sample * (1.0/32768)
-        sum_squares += n*n
-    return math.sqrt( sum_squares / count )
+while stream.is_active(): 
+    db = 20 * log10(rms)
+    print(f"RMS: {rms} DB: {db}") 
+    # refresh every 0.3 seconds 
+    time.sleep(0.3)
 
-try:
-    while True:
-        data = stream.read(CHUNK)
-        rems = rms(data)
-        print(rems)
-       #print(f"Max: {np.max(audio_data)}, Min: {np.min(audio_data)}")
-        
-# Get gun to stfu by turning pc off
-# Get gun to stfu by playing funny audio 
-# Get gun to stfu by taking his discord auth token
+stream.stop_stream()
+stream.close()
 
-except KeyboardInterrupt:
-    pass
+p.terminate()
