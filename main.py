@@ -17,8 +17,8 @@ try:
         data = stream.read(CHUNK)
         
         audio_data = np.frombuffer(data, dtype=np.int16)
-        
-        print(f"Max: {np.max(audio_data)}, Min: {np.min(audio_data)}")
+        print(audio_data)
+       #print(f"Max: {np.max(audio_data)}, Min: {np.min(audio_data)}")
         
 # Get gun to stfu by turning pc off
 # Get gun to stfu by playing funny audio 
