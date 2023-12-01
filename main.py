@@ -1,5 +1,7 @@
 import pyaudio
 import numpy as np
+import math
+import struct
 
 CHUNK = 1024
 
@@ -12,12 +14,22 @@ stream = p.open(format=pyaudio.paInt16,
                 frames_per_buffer=CHUNK)
 
 print("Listening...")
+
+def rms( data ):
+    count = len(data)/2
+    format = "%dh"%(count)
+    shorts = struct.unpack( format, data )
+    sum_squares = 0.0
+    for sample in shorts:
+        n = sample * (1.0/32768)
+        sum_squares += n*n
+    return math.sqrt( sum_squares / count )
+
 try:
     while True:
         data = stream.read(CHUNK)
-        
-        audio_data = np.frombuffer(data, dtype=np.int16)
-        print(audio_data)
+        rms = rms(data,2)
+        print(rms)
        #print(f"Max: {np.max(audio_data)}, Min: {np.min(audio_data)}")
         
 # Get gun to stfu by turning pc off
