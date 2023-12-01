@@ -28,8 +28,8 @@ def rms( data ):
 try:
     while True:
         data = stream.read(CHUNK)
-        rms = rms(data)
-        print(rms)
+        rems = rms(data)
+        print(rems)
        #print(f"Max: {np.max(audio_data)}, Min: {np.min(audio_data)}")
         
 # Get gun to stfu by turning pc off
